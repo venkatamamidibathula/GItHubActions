@@ -58,7 +58,9 @@ jobs:
 ```
 ---
 
-**Outputs that can be used for other jobs**
+**Outputs**
+
+Outputs are published values that can be used for other jobs.
 
 
 **$GITHUB_OUTPUT**: It targets a special file created by GITHUB in environment which job runs where output key value pair is written to.
