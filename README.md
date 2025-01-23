@@ -182,3 +182,84 @@ jobs:
         run: echo "${{ needs.build.outputs.script-file }}"
 ```
 
+---
+
+**Caching Dependencies**
+
+- Dependencies can be centrally cached which aid in fast job executions.
+- If dependencies are not cached the jobs will have reinstall all dependencies potentially causing delays.
+
+- Action to be used **actions/cache@v3** and key should be a dynamic value which uses a special variable in github called **deps-node-modules-{{ hashFiles(****'/package-lock.json') }}**
+
+```yaml
+
+
+name: Deploy website
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v3
+      - name: cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+          #used for retrieving the cache and be used by the runner machine and also for discarding and the value is a dynamic value
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint code
+        run: npm run lint
+      - name: Test code
+        run: npm run test
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      script-file: ${{ steps.publish.outputs.filename }} #steps.id.outputs.outputname
+    steps:
+      - name: Get code
+        uses: actions/checkout@v3
+      - name: cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Build website
+        run: npm run build
+      - name: Publish JS filename
+        id: publish
+        run: find dist/assets/*.js -type f -execdir echo 'filename={}' >> $GITHUB_OUTPUT ';' #It targets a special file created by GITHUB in environment which job runs where output key value pair is written to.
+      - name: upload to artifactory
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-files
+          path: |
+            dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Downloading artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-files
+      - name: Output contents
+        run: ls
+      - name: Deploy
+        run: echo "Deploying..."
+      - name: Output filename
+        run: echo "${{ needs.build.outputs.script-file }}"
+
+```
+
+
+
