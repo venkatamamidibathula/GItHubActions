@@ -359,3 +359,55 @@ jobs:
           echo "Output Mongo user name : ${{ env.MONGODB_USERNAME }}"
 
 ```
+---
+
+**Repository Environments**
+
+![githubenvs](githubenvs.png)
+
+- Most importantly we need this if we have environment specific secrets.
+- It can be specified using environment key. Its similar to develop branch only triggers for dev and test environment and release branch triggers for stage.
+
+```yaml
+
+name: Deployment
+on:
+  push:
+    branches:
+      - develop
+      - master
+jobs:
+  test:
+    environment: testing
+    env:
+      MONGODB_CLUSTER_ADDRESS: cluster0.kka04.mongodb.net
+      MONGODB_USERNAME: ${{ secrets.MONGODB_USERNAME }}
+      MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
+      PORT: 8080
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Code
+        uses: actions/checkout@v3
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: npm-deps-${{ hashFiles('**/package-lock.json') }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Run server
+        run: npm start & npx wait-on http://127.0.0.1:$PORT
+      - name: Run tests
+        run: npm test
+      - name: Output information
+        run: echo "MongoDB username is ${{ env.MONGODB_USERNAME }}"
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output information
+        run: |
+          echo "Output Mongo user name : ${{ env.MONGODB_USERNAME }}"
+```
+
+![Secret Variables](secvars.png)
