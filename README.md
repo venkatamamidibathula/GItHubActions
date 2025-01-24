@@ -261,5 +261,101 @@ jobs:
 
 ```
 
+---
+
+**Environment Variables**
+
+You can define environment variables at **job** level or **workflow level** and reference them in your github yaml using the parameter ${{ env.variable }}
+
+However, this approach is not advisable as it can lead to exposing them on repo and for that reason we have to use the secrets configuration.
+
+```yaml
 
 
+name: Deployment
+on:
+  push:
+    branches:
+      - develop
+      - master
+jobs:
+  test:
+    env:
+      MONGODB_CLUSTER_ADDRESS: cluster0.kka04.mongodb.net
+      MONGODB_USERNAME: mongouser
+      MONGODB_PASSWORD: FMUW0JGcqtDcD8dM
+      PORT: 8080
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Code
+        uses: actions/checkout@v3
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: npm-deps-${{ hashFiles('**/package-lock.json') }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Run server
+        run: npm start & npx wait-on http://127.0.0.1:$PORT
+      - name: Run tests
+        run: npm test
+      - name: Output information
+        run: echo "MongoDB username is ${{ env.MONGODB_USERNAME }}"
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output information
+        run: |
+          echo "Output Mongo user name : ${{ env.MONGODB_USERNAME }}"
+```
+---
+
+**Secrets**
+
+![Secrets Image](secrets.jpg)
+
+
+```yaml
+
+
+name: Deployment
+on:
+  push:
+    branches:
+      - develop
+      - master
+jobs:
+  test:
+    env:
+      MONGODB_CLUSTER_ADDRESS: cluster0.kka04.mongodb.net
+      MONGODB_USERNAME: ${{ secrets.MONGODB_USERNAME }}
+      MONGODB_PASSWORD: ${{ secrets.MONGODB_PASSWORD }}
+      PORT: 8080
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Code
+        uses: actions/checkout@v3
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: npm-deps-${{ hashFiles('**/package-lock.json') }}
+      - name: Install dependencies
+        run: npm ci
+      - name: Run server
+        run: npm start & npx wait-on http://127.0.0.1:$PORT
+      - name: Run tests
+        run: npm test
+      - name: Output information
+        run: echo "MongoDB username is ${{ env.MONGODB_USERNAME }}"
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output information
+        run: |
+          echo "Output Mongo user name : ${{ env.MONGODB_USERNAME }}"
+
+```
