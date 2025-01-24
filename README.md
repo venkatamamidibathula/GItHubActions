@@ -410,4 +410,4 @@ jobs:
           echo "Output Mongo user name : ${{ env.MONGODB_USERNAME }}"
 ```
 
-![Secret Variables](secvars.png)
+![Secret Variables](secvars.jpg)
