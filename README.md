@@ -1,8 +1,21 @@
 # GItHubActions
 GitHub Actions Repository
 
-**Upload and Deploy Artifacts**
+---
 
+# Skip Workflows
+
+We can skip workflows, by adding an annotated message stating [skip ci] in commit message".
+
+This will skip workflow from getting executed.
+
+---
+
+# Job artifacts and outputs
+
+![Alt text](jobartifacts.png)
+
+**Upload and Deploy Artifacts**
 
 
 ```yaml
