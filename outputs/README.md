@@ -76,6 +76,7 @@ jobs:
         run: ls -la
       - name: Deploy to production
         run: echo "Deploying to production..."
-
+      - name: Output filename
+        run: echo "${{ needs.build.outputs.script-file }}"
 
 ```
