@@ -1017,4 +1017,4 @@ jobs:
 ---
 
 
-![CustomActions](customactions.jpg)
+![CustomActions](customactions.png)
