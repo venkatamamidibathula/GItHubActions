@@ -920,6 +920,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Get Code
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ inputs.artifact-name }}
       - name: Output information
         run: echo "Deploying & uploading...."
 
