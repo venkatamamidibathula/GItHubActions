@@ -3,3 +3,5 @@
 3. Given a requirement , create a build pipeline for the repo where you create an artifact and use it another stage in workflow? (REPO URL: https://github.com/venkatamamidibathula/nodejs)
 4. Outline the structure of github actions?
 5. Create a build and deploy script for the nodejs project and in terms of issues output the information to console?
+6. Given a requirement , create a pipeline where it uploads test report only if the npm test fails? (REPO URL: https://github.com/venkatamamidibathula/nodejs)
+7. What is the difference between steps.id.outcome and steps.id.conclusion?

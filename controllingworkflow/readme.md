@@ -37,6 +37,42 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Deploy to production
-        run: echo Deploying to production...    
+        run: echo Deploying to production...  
+```
+```yaml
+
+name: Workflow
+on: [push,workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run a one-line script
+        run: echo Hello, world!
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+      - name: Run a multi-line script
+        id: build-and-test
+        run: |
+          npm ci
+          npm run build
+          npm test
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to production
+        run: echo Deploying to production...  
+  report:
+    needs: [lint, deploy]
+    if: failure()
+    steps:
+      - name: Output information
+        run: |
+          echo "Something went wrong"
+          echo "${{ toJSON(github) }}"  
 
 ```
