@@ -1019,7 +1019,100 @@ jobs:
 
 ![CustomActions](customactions.png)
 
+- Javascript actions
+- Docker actions
+- Composite actions
 
+
+![CustomActions](customactiontypes.png)
+
+
+# Composite Actions vs. Reusable Workflows
+
+A **composite action** bundles steps to reuse **inside a job**. A **reusable workflow** bundles one or more **jobs** to reuse in another workflow.
+
+| | Composite action | Reusable workflow |
+|---|---|---|
+| Called from | A job’s `steps` | A workflow’s `jobs` |
+| Can define | Steps that run as part of the caller’s job | Jobs, runners, and their steps |
+| Typical use | Reuse steps such as setup, caching, or installing dependencies | Reuse a larger pipeline, such as build-and-test or deploy |
+| File location | Usually a directory containing `action.yml` or `action.yaml` | A YAML file under `.github/workflows/` |
+
+For dependency installation, a composite action is a good fit: it runs the cache and `npm install` steps as part of the existing job. A reusable workflow is better when you want to share an entire build or deployment job across workflows.
+
+## Example call sites
+
+### Composite action — called as a step
+
+```yaml
+steps:
+  - uses: ./.github/actions
+```
+
+### Reusable workflow — called as a job
+
+```yaml
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+```
+
+```yaml
+
+name: Workflow
+on: [push,workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run a one-line script
+        run: echo Hello, world!
+      - name: Load & Cache Dependencies
+        uses: ./.github/actions/cached-deps/action.yaml
+      - name: Run a multi-line script
+        id: build-and-test
+        run: |
+          npm run build
+          npm test
+      - name: Upload test reports
+        if: failure() && steps.build-and-test.outcome == 'failure'
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to production
+        run: echo Deploying to production...    
+
+
+
+```
+under .github/actions/sub-directory/actions.yaml
+
+```yaml
+
+
+name: 'Get & Cache Dependencies'
+description: 'Get & Cache Dependencies'
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache dependencies
+      id: cache
+      uses: actions/cache@v3
+      with:
+        path: node_modules
+        key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+    - name: Install dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: npm install
+      shell: bash
+
+```
 
 ---
 
