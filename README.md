@@ -1113,7 +1113,14 @@ runs:
       shell: bash
 
 ```
+A composite action doesn’t choose its own machine. It runs as part of the job that calls it, so that job’s runs-on setting determines the runner:
 
+
+Here, the composite action runs on the Ubuntu runner assigned to build. If another job calls it with runs-on: windows-latest, it runs on that Windows runner instead.
+
+In your composite action, shell: bash is required because GitHub Actions requires every run: step in a composite action to specify its shell. This tells the runner how to interpret npm install. Workflow steps can use a default shell, but composite-action run steps don’t inherit one.
+
+So shell: bash chooses the command interpreter—not the runner machine.
 ---
 
 **Service Containers**
