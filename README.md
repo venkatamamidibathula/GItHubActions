@@ -1121,6 +1121,167 @@ Here, the composite action runs on the Ubuntu runner assigned to build. If anoth
 In your composite action, shell: bash is required because GitHub Actions requires every run: step in a composite action to specify its shell. This tells the runner how to interpret npm install. Workflow steps can use a default shell, but composite-action run steps don’t inherit one.
 
 So shell: bash chooses the command interpreter—not the runner machine.
+
+--
+
+# Workflow and Composite Action: Exact Flow
+
+**workflow.yaml**
+
+```yaml
+
+
+name: Workflow
+on: [push,workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run a one-line script
+        run: echo Hello, world!
+      - name: Load & Cache Dependencies
+        id: cache-deps
+        uses: ./.github/actions/cached-deps/action.yaml
+        with:
+          caching: false
+      - name: Output cache hit
+        run: echo "Cache hit: ${{ steps.cache-deps.outputs.used-cache }}"
+      - name: Run a multi-line script
+        id: build-and-test
+        run: |
+          npm run build
+          npm test
+      - name: Upload test reports
+        if: failure() && steps.build-and-test.outcome == 'failure'
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy to production
+        run: echo Deploying to production...    
+
+```
+
+actions/cached-deps/action.yaml
+
+```yaml
+
+name: 'Get & Cache Dependencies'
+description: 'Get & Cache Dependencies'
+inputs:
+  caching:
+    description: 'Whether to cache dependencies or not'
+    required: false
+    default: 'true'
+outputs:
+  used-cache:
+    description: 'Whether the cache was hit or not'
+    value: ${{ steps.cache.outputs.cache-hit || 'false' }}
+runs:
+  using: 'composite'
+  steps:
+    - name: Cache dependencies
+      id: cache
+      if: inputs.caching == 'true'
+      uses: actions/cache@v3
+      with:
+        path: node_modules
+        key: deps-node-modules-${{ hashFiles('**/package-lock.json') }}
+    - name: Install dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: npm ci
+      shell: bash
+
+```
+
+This describes how `workflow.yaml` calls the composite action, passes values into it, and reads its output.
+
+## 1. The workflow starts and creates the job
+
+The workflow starts on either a `push` or a manual `workflow_dispatch`. GitHub creates the `build` job on an Ubuntu runner because it has:
+
+```yaml
+runs-on: ubuntu-latest
+```
+
+The job’s steps run in order. The checkout step puts the repository files on the runner.
+
+## 2. The workflow calls the composite action
+
+The workflow step gives the action an ID and passes an input:
+
+```yaml
+- name: Load & Cache Dependencies
+  id: cache-deps
+  uses: ./.github/actions/cached-deps
+  with:
+    caching: 'false'
+```
+
+Use the **action directory** in `uses`, not the `action.yaml` file. GitHub finds the metadata file inside that directory.
+
+`id: cache-deps` names the step so later workflow steps can refer to its outputs. `with` passes the input value to the action. Action inputs are strings, so `'false'` is the clearest form.
+
+## 3. The action receives and checks the input
+
+The composite action declares `caching` with a default of `'true'`. Because the workflow passed `'false'`, inside the action this expression:
+
+```yaml
+if: inputs.caching == 'true'
+```
+
+evaluates to false. So the cache step is **skipped**.
+
+The install step then checks:
+
+```yaml
+if: steps.cache.outputs.cache-hit != 'true'
+```
+
+Since the cache step was skipped, it produced no `cache-hit` value. That missing value is not `'true'`, so the condition passes and `npm ci` runs. `shell: bash` tells the runner which shell to use for that command.
+
+## 4. The action returns its output
+
+The action declares an output named `used-cache` and maps it to the cache step’s `cache-hit` output:
+
+```yaml
+outputs:
+  used-cache:
+    value: ${{ steps.cache.outputs.cache-hit || 'false' }}
+```
+
+The `|| 'false'` means: if `cache-hit` has no value—for example, because caching was disabled—return the string `'false'` instead.
+
+The workflow reads that returned action output with:
+
+```yaml
+${{ steps.cache-deps.outputs.used-cache }}
+```
+
+There are two IDs in that path, serving different purposes:
+
+- `cache-deps` is the ID of the **workflow step that called the action**.
+- `used-cache` is the **output declared by the action**.
+
+So the “Output cache hit” step substitutes the returned value into its command and prints it. With `caching: 'false'`, it prints:
+
+```text
+Cache hit: false
+```
+
+## Other possible cache outcomes
+
+If `caching` is `'true'`, the cache step runs:
+
+- **Cache hit:** `cache-hit` is `'true'`; `npm ci` is skipped; `used-cache` returns `'true'`.
+- **Cache miss:** `cache-hit` is `'false'`; `npm ci` runs; `used-cache` returns `'false'`.
+
+After that, the main workflow continues to build and test. The deploy job waits for the build job and runs only if the build succeeds.
 ---
 
 **Service Containers**
